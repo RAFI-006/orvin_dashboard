@@ -1,174 +1,21 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Orvin – Project TODOs</title>
-  <style>
-    :root{
-      --bg:#0f172a;
-      --card:#111827ee;
-      --text:#e5e7eb;
-      --muted:#94a3b8;
-      --accent:#38bdf8;
-      --accent-2:#a78bfa;
-      --ok:#22c55e;
-      --border:#1f2937;
-      --danger:#ef4444;
-    }
-    *{box-sizing:border-box}
-    html,body{height:100%}
-    body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased}
-    .wrap{max-width:900px;margin:40px auto;padding:24px}
-    .card{background:linear-gradient(180deg,rgba(17,24,39,.85),rgba(17,24,39,.7));border:1px solid var(--border);border-radius:20px;padding:24px;box-shadow:0 10px 40px rgba(0,0,0,.3);backdrop-filter:blur(8px)}
-    h1{font-weight:800;margin:0 0 8px;font-size:clamp(22px,2.6vw,30px)}
-    .sub{color:var(--muted);margin-bottom:20px}
-    .controls{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0 20px}
-    button,.chip{border:1px solid var(--border);background:#0b1220;color:var(--text);padding:10px 14px;border-radius:999px;cursor:pointer;font-weight:600;transition:.2s}
-    .chip{cursor:default}
-    .accent{background:linear-gradient(135deg,var(--accent),var(--accent-2));border:none}
-    .danger{background:var(--danger);border:none;color:#fff}
-    .list{list-style:none;padding:0;margin:0}
-    .item{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 12px;border-bottom:1px dashed #1e293b}
-    .item:last-child{border-bottom:none}
-    .left{display:flex;align-items:flex-start;gap:12px;flex:1}
-    .label{flex:1;line-height:1.45}
-    input[type="checkbox"]{width:20px;height:20px;margin-top:2px;cursor:pointer}
-    .done .label{opacity:.55;text-decoration:line-through}
-    .tag{display:inline-block;margin-left:8px;font-size:12px;padding:2px 8px;border-radius:999px;background:#1f2937;color:#cbd5e1;border:1px solid #263241}
-    footer{color:var(--muted);margin-top:16px;font-size:14px}
-    .progress{height:10px;background:#0b1220;border-radius:999px;border:1px solid var(--border);overflow:hidden;margin:8px 0 0}
-    .bar{height:100%;width:0%;background:linear-gradient(90deg,var(--ok),var(--accent));transition:width .2s ease}
-    .search{flex:1;min-width:220px}
-    input[type="search"],input[type="text"]{width:100%;padding:10px 14px;border-radius:999px;border:1px solid var(--border);background:#0b1220;color:var(--text)}
-    .add-form{display:flex;gap:10px;margin:10px 0 20px}
-  </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Orvin Todo Checklist</title>
+  <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
-  <div class="wrap">
-    <div class="card">
-      <h1>Project TODOs</h1>
-      <div class="sub" id="summary">0 of 0 completed</div>
-
-      <div class="controls">
-        <input class="search" id="search" type="search" placeholder="Filter tasks…" />
-        <button id="checkAll">Check all</button>
-        <button id="uncheckAll">Uncheck all</button>
-        <button id="clearCompleted">Delete checked</button>
-        <span class="chip" id="countChip">Total: 0</span>
-      </div>
-
-      <form class="add-form" id="addForm">
-        <input type="text" id="newTodo" placeholder="Add a new task..." required />
-        <button type="submit" class="accent">Add</button>
-      </form>
-
-      <ul class="list" id="todoList" aria-live="polite"></ul>
-
-      <div class="progress" aria-hidden="true"><div class="bar" id="bar"></div></div>
-      <footer>Your checks and new tasks are saved locally in this browser.</footer>
-    </div>
+  <h1>Orvin Todo Checklist</h1>
+  <div class="input-container">
+    <input type="text" id="new-todo" placeholder="Add new todo..." />
+    <button id="add-btn">Add</button>
   </div>
-
-  <script>
-    const initialTasks = [
-      "Upload the report: Upload the report/prescriptions",
-      "Change button style of onboarding pages",
-      "Welcome to report tracker to orvin (continue with google page)",
-      "New profile is causing error and showing old data",
-      "Scroll should animate slowly.",
-      "Remove arrow from animated cards.",
-      "Daily digest is not working",
-      "Add sugar/Add BP button should be in centre instead of below",
-      "Sugar type should change to random",
-      "Blood pressure graph colour issue",
-      "Adjust blood pressure graph abnormal value is cutting the graph.",
-      "Button gradient colour should be changed.",
-      "No reports found image and copy should be changed",
-      "Donut chart position issue",
-      "Account/profile delete should also delete bp/sugar data from firestore",
-      "Add weight feature with linear chart (should just allow weight)",
-      "Low: Ability to navigate to scan page, bp, sugar sheet when user clicks on scrolling cards.",
-      "Low: View all button for showing all the digest in web view"
-    ];
-
-    const STORAGE_KEY = 'orvin_todos_v1';
-    const loadState = () => { try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; } catch { return {}; } };
-    const saveState = (state) => localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-    const makeId = (text) => 'id_' + btoa(unescape(encodeURIComponent(text))).replace(/=+$/,'');
-
-    const listEl = document.getElementById('todoList');
-    const summaryEl = document.getElementById('summary');
-    const barEl = document.getElementById('bar');
-    const countChip = document.getElementById('countChip');
-
-    const state = loadState();
-    initialTasks.forEach(t => {
-      const id = makeId(t);
-      if (!(id in state)) state[id] = { text: t, done: false };
-      else state[id].text = t;
-    });
-
-    function render(filter = ''){
-      listEl.innerHTML = '';
-      const entries = Object.entries(state).map(([id, obj]) => ({ id, ...obj }));
-      const filtered = filter ? entries.filter(e => e.text.toLowerCase().includes(filter.toLowerCase())) : entries;
-
-      filtered.forEach(({id, text, done}) => {
-        const li = document.createElement('li');
-        li.className = 'item' + (done ? ' done' : '');
-
-        const left = document.createElement('div');
-        left.className = 'left';
-        const cb = document.createElement('input');
-        cb.type = 'checkbox';
-        cb.checked = !!done;
-        cb.id = id;
-        cb.addEventListener('change', () => { state[id].done = cb.checked; saveState(state); render(document.getElementById('search').value); });
-
-        const label = document.createElement('label');
-        label.className = 'label';
-        label.htmlFor = id;
-        label.textContent = text;
-        left.appendChild(cb);
-        left.appendChild(label);
-
-        const delBtn = document.createElement('button');
-        delBtn.textContent = 'Delete';
-        delBtn.className = 'danger';
-        delBtn.addEventListener('click', () => { delete state[id]; saveState(state); render(document.getElementById('search').value); });
-
-        li.appendChild(left);
-        li.appendChild(delBtn);
-        listEl.appendChild(li);
-      });
-
-      const all = Object.values(state);
-      const done = all.filter(t => t.done).length;
-      const total = all.length;
-      summaryEl.textContent = `${done} of ${total} completed`;
-      countChip.textContent = `Total: ${total}`;
-      barEl.style.width = total ? ((done/total)*100).toFixed(1) + '%' : '0%';
-    }
-
-    document.getElementById('checkAll').addEventListener('click', () => { Object.keys(state).forEach(k => state[k].done = true); saveState(state); render(document.getElementById('search').value); });
-    document.getElementById('uncheckAll').addEventListener('click', () => { Object.keys(state).forEach(k => state[k].done = false); saveState(state); render(document.getElementById('search').value); });
-    document.getElementById('clearCompleted').addEventListener('click', () => { Object.keys(state).forEach(k => { if (state[k].done) delete state[k]; }); saveState(state); render(document.getElementById('search').value); });
-    document.getElementById('search').addEventListener('input', (e) => { render(e.target.value); });
-
-    document.getElementById('addForm').addEventListener('submit', (e) => {
-      e.preventDefault();
-      const input = document.getElementById('newTodo');
-      const text = input.value.trim();
-      if (!text) return;
-      const id = makeId(text + Date.now());
-      state[id] = { text, done: false };
-      saveState(state);
-      input.value = '';
-      render(document.getElementById('search').value);
-    });
-
-    render();
-  </script>
+  <div id="todo-list"></div>
+  <div class="actions">
+    <button id="delete-checked">Delete Checked</button>
+  </div>
+  <script src="js/app.js"></script>
 </body>
 </html>
